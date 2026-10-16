@@ -204,6 +204,34 @@ Hide/Show table of contents
 | 158 | [What is a Self-Healing System?](#what-is-a-self-healing-system) |
 | 159 | [What is Canary Analysis?](#what-is-canary-analysis) |
 | 160 | [What is Infrastructure Drift?](#what-is-infrastructure-drift) |
+|     | **Terraform** |
+| 161 | [Difference between count and for_each?](#difference-between-count-and-for_each) |
+| 162 | [How to resolve Terraform State if it gets locked?](#how-to-resolve-terraform-state-if-it-gets-locked-) |
+| 163 | [Terraform apply failed halfway, How do you resolve it?](#terraform-apply-failed-halfway-how-do-you-resolve-it) |
+| 164 | [A production resource was manually changed during an emergency. Terraform now wants to revert the change. What would you do?](#a-production-resource-was-manually-changed-during-an-emergency-terraform-now-wants-to-revert-the-change-what-would-you-do) |
+| 165 | [What is a Race Condition?](#what-is-a-race-condition) |
+| 166 | [What is Terraform State Corruption?](#what-is-terraform-state-corruption) |
+| 167 | [Why do we store Terraform state remotely?](#why-do-we-store-terraform-state-remotely) |
+| 168 | [What is the use of DynamoDB when storing the state file remotely?](#what-is-the-use-of-dynamodb-when-storing-the-state-file-remotely) |
+| 169 | [What are Provisioners and why are they not widely used?](#what-are-provisioners-and-why-are-they-not-widely-used) |
+| 170 | [What is the difference between running Terraform and running it with Ansible?](#what-is-the-difference-between-running-terraform-and-running-it-with-ansible) |
+| 171 | [Where can we store the state file remotely, and why don't we store it on GitHub?](#where-can-we-store-the-state-file-remotely-and-why-dont-we-store-it-on-github) |
+| 172 | [What is Terraform Taint and how is it useful?](#what-is-terraform-taint-and-how-is-it-useful) |
+| 173 | [After Terraform Plan, one production server is going to be recreated. How will you troubleshoot it?](#after-terraform-plan-one-production-server-is-going-to-be-recreated-how-will-you-troubleshoot-it) |
+| 174 | [What changes are performed when we run Terraform Init?](#what-changes-are-performed-when-we-run-terraform-init) |
+| 175 | [What is the difference between Arguments, Attributes, and Interpolation?](#what-is-the-difference-between-arguments-attributes-and-interpolation) |
+| 176 | [What are Dynamic Blocks?](#what-are-dynamic-blocks) |
+| 177 | [How do you delete a specific resource while running Terraform Apply?](#how-do-you-delete-a-specific-resource-while-running-terraform-apply) |
+| 178 | [How does Terraform resolve resource dependencies?](#how-does-terraform-resolve-resource-dependencies) |
+| 179 | [Which command should you run to inspect and sync state with reality without changing actual resources?](#which-command-should-you-run-to-inspect-and-sync-state-with-reality-without-changing-actual-resources) |
+| 180 | [How do we protect sensitive variables in Terraform?](#how-do-we-protect-sensitive-variables-in-terraform) |
+| 181 | [What happens when you remove the middle item from a list of resources managed using Count?](#what-happens-when-you-remove-the-middle-item-from-a-list-of-resources-managed-using-count) |
+| 182 | [How do you stop managing an existing S3 bucket without deleting it?](#how-do-you-stop-managing-an-existing-s3-bucket-without-deleting-it) |
+| 183 | [How do you protect a production Aurora PostgreSQL cluster against accidental deletion or replacement?](#how-do-you-protect-a-production-aurora-postgresql-cluster-against-accidental-deletion-or-replacement) |
+| 184 | [What will Terraform Refresh do?](#what-will-terraform-refresh-do) |
+| 185 | [How will you restore a Terraform state file if it gets accidentally deleted?](#how-will-you-restore-a-terraform-state-file-if-it-gets-accidentally-deleted) |
+| 186 | [What happens if you do not use DynamoDB with a state file stored remotely in S3?](#what-happens-if-you-do-not-use-dynamodb-with-a-state-file-stored-remotely-in-s3) |
+
 
 ## Core DevOps Concepts
 
@@ -2886,4 +2914,589 @@ Hide/Show table of contents
 
     Infrastructure Drift occurs when the actual state of infrastructure diverges from the desired state defined in code, often due to manual changes or configuration errors. Tools like Terraform and Ansible can help detect and correct drift.
 
-    **[⬆ Back to Top](#table-of-contents)**
+   **[⬆ Back to Top](#table-of-contents)**
+
+161. ### Difference between count and for_each?
+
+    'Count' is index-based and uses a number/list, with instances identified by count.index, best for identical/similar resources.
+    'for_each' is key-based and uses a map/set, with instances identified by each.key, best for distinct resources with stable identities.
+     
+   **[⬆ Back to Top](#table-of-contents)**
+    
+162. ### How to resolve Terraform State if it gets locked ?
+
+    First, check whether another Terraform process is using the state. If the lock is stale, use the lock ID from the error message with terraform force-unlock <LOCK_ID>. Never force-unlock while another Terraform operation is running, as it can cause state corruption.
+
+   **[⬆ Back to Top](#table-of-contents)**
+
+163. ### Terraform apply failed halfway, How do you resolve it ?
+
+    - Check the error message and identify which resource caused the terraform apply to fail.
+    - Terraform usually updates the state for resources that were successfully created/modified before the failure.
+    - Run terraform plan to see the current state vs. actual infrastructure.
+    - If required, verify the affected resources directly in AWS/Azure.
+    - Fix the root cause of the failure, such as permissions, dependency, quota, or configuration issue.
+    - Run terraform plan again and review the proposed changes carefully.
+    - If the plan looks correct, run terraform apply again.
+    - Avoid manually deleting resources or modifying the state unless necessary; use terraform import or state commands when state reconciliation is required.
+
+   **[⬆ Back to Top](#table-of-contents)**
+    
+164. ### A production resource was manually changed during an emergency. Terraform now wants to revert the change. What would you do?
+
+    - First, verify why the manual change was made and whether it is still required for production.
+    - If the change is temporary, coordinate with the team and decide when it can be reverted.
+    - If the change is required permanently, update the Terraform configuration to match the desired production state.
+    - Run terraform plan and verify that Terraform no longer wants to revert the change.
+    - If the manual change should be reverted, let Terraform apply the original configuration.
+    - Document the emergency change so future deployments don't unexpectedly overwrite it.
+    - Avoid using ignore_changes just to hide the drift unless the attribute is intentionally managed outside Terraform.
+
+   **[⬆ Back to Top](#table-of-contents)**
+   
+165. ### What is a Race Condition?
+
+     A race condition occurs when two or more processes access or modify the same resource at the same time, and the final result depends on the order in which they execute.
+     In Terraform, it can happen when multiple users run `terraform apply` simultaneously against the same state without proper state locking. This can cause conflicting changes or state inconsistencies.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+166. ### What is Terraform State Corruption?
+
+     Terraform state corruption occurs when the state file becomes invalid, inconsistent, or damaged, preventing Terraform from correctly tracking infrastructure resources.
+    Possible causes include interrupted state writes, manual editing, concurrent operations, or storage issues.
+    To troubleshoot:
+    - Check the state file and Terraform error messages.
+    - Restore a valid backup if required.
+    - Use `terraform state pull` to inspect the current state when possible.
+    - Avoid manually modifying the state file unless absolutely necessary.
+
+    For remote state, use backend versioning and backups to support recovery.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+167. ### Why do we store Terraform State Remotely?
+
+We store Terraform state remotely to allow multiple team members and CI/CD pipelines to access the same infrastructure state.
+
+Benefits include:
+- **Centralized storage:** Everyone works with the same state.
+- **Collaboration:** Multiple team members can work on the infrastructure.
+- **Locking:** Supported backends can prevent concurrent state modifications.
+- **Backup and recovery:** Versioning can help restore earlier state versions.
+- **Security:** Access can be controlled through IAM and backend permissions.
+
+For example, we can store Terraform state in an Amazon S3 bucket.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+168. ### What is the use of DynamoDB when storing the State File Remotely?
+
+Traditionally, when Terraform state was stored in an S3 bucket, DynamoDB was used to provide state locking.
+
+Before performing a state-changing operation, Terraform acquired a lock. Other Terraform operations using the same locking mechanism had to wait until the lock was released.
+
+This helped prevent concurrent operations from modifying the same state simultaneously.
+
+However, **DynamoDB-based locking is deprecated for the S3 backend in newer Terraform versions.** The S3 backend supports native lock files using `use_lockfile = true`.
+
+Example:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket       = "my-terraform-state"
+    key          = "production/terraform.tfstate"
+    region       = "ap-south-1"
+    use_lockfile = true
+  }
+}
+```
+
+**[⬆ Back to Top](#table-of-contents)**
+
+169. ### What are Provisioners and why are they not widely used?
+
+Provisioners are used to execute scripts or commands on a local machine or a remote resource during Terraform resource creation or destruction.
+
+There are three common types:
+- `local-exec`: Executes commands on the machine running Terraform.
+- `remote-exec`: Executes commands on a remote machine.
+- `file`: Copies files to a remote machine.
+
+Example:
+
+```hcl
+resource "aws_instance" "web" {
+  ami           = "ami-xxxxxxxx"
+  instance_type = "t3.micro"
+
+  provisioner "local-exec" {
+    command = "echo Instance created"
+  }
+}
+```
+
+Provisioners are not widely recommended because Terraform cannot reliably model their actions as part of the resource lifecycle. They may also fail midway, making recovery difficult.
+
+Instead, use cloud-init, user data, configuration management tools such as Ansible, or image-building tools where appropriate.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+170. ### What is the difference between running Terraform and running it with Ansible?
+
+Terraform and Ansible serve different primary purposes.
+
+| Terraform | Ansible |
+|---|---|
+| Primarily provisions and manages infrastructure. | Primarily configures systems and automates operational tasks. |
+| Uses declarative configuration and a state file. | Uses playbooks and modules to execute tasks. |
+| Manages resources such as VPCs, EC2 instances, and databases. | Installs packages, configures services, and deploys applications. |
+| Uses a dependency graph to determine execution order. | Uses playbook task order, dependencies, and execution strategies. |
+| Commonly uses `terraform plan` and `terraform apply`. | Commonly uses `ansible-playbook`. |
+
+**Example:** Terraform creates an EC2 instance and its security group. Ansible then connects to the instance, installs Nginx, and configures the application.
+
+They can also be used independently, depending on the requirements.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+171. ### Where can we store the State File Remotely, and why don't we store it on GitHub?
+
+Terraform state can be stored in remote backends such as:
+- Amazon S3
+- Azure Blob Storage
+- Google Cloud Storage
+- HCP Terraform
+- Other supported remote backends
+
+We generally avoid storing state files in GitHub repositories because state may contain sensitive information, including resource identifiers, infrastructure details, and potentially secrets.
+
+Even if a variable is marked `sensitive`, its value can still be stored in the state file.
+
+For remote state, use access controls, encryption, versioning, and locking where supported. If GitHub is used for source control, keep state files and secret-bearing files out of the repository.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+172. ### What is Terraform Taint and how is it useful?
+
+Terraform taint was used to mark a resource for replacement during the next applicable plan and apply operation.
+
+For example, if an EC2 instance became unhealthy and needed to be recreated, taint could mark it for replacement.
+
+The older command was:
+
+```bash
+terraform taint aws_instance.web
+```
+
+The `terraform taint` command is deprecated. The recommended approach is to use the `-replace` option:
+
+```bash
+terraform plan -replace="aws_instance.web"
+terraform apply -replace="aws_instance.web"
+```
+
+This explicitly requests replacement of the selected resource.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+173. ### After Terraform Plan, one production server is going to be recreated. How will you troubleshoot it?
+
+First, I would not immediately run `terraform apply` because replacing a production server may cause downtime or data loss.
+
+I would follow these steps:
+
+1. **Inspect the plan:** Run `terraform plan` and identify why Terraform wants to replace the server. Look for either `-/+` or `+/-`, which indicate replacement. The order shows whether Terraform will destroy the existing resource before creating the replacement or create the replacement before destroying the existing resource.
+2. **Check configuration changes:** Review recent changes to arguments such as the AMI, subnet, instance type, or other replacement-triggering attributes.
+3. **Check immutable attributes:** Some resource attributes cannot be updated in place and require replacement.
+4. **Check state and real infrastructure:** Compare the Terraform configuration and state with the actual resource in the cloud.
+5. **Check recent changes:** Review code commits and any manual changes made through the cloud console.
+6. **Review lifecycle rules:** Check whether `create_before_destroy` or other lifecycle settings affect replacement behavior.
+7. **Validate the fix:** Make the required correction and generate a new plan.
+
+I would proceed only after confirming the replacement is intentional and understanding its production impact.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+174. ### What changes are performed when we run Terraform Init?
+
+`terraform init` initializes a Terraform working directory and prepares it for use.
+
+It performs tasks such as:
+- Downloads the required providers.
+- Initializes the configured backend.
+- Downloads referenced modules.
+- Creates or updates the `.terraform` directory.
+- Creates or updates the dependency lock file, `.terraform.lock.hcl`, when applicable.
+
+If the backend configuration changes, Terraform may require backend migration or reinitialization.
+
+Example:
+
+```bash
+terraform init
+```
+
+It does not normally create, update, or delete the actual infrastructure resources.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+175. ### What is the difference between Arguments, Attributes, and Interpolation?
+
+**Arguments:** These are configuration values supplied to a resource or module.
+
+Example:
+
+```hcl
+resource "aws_instance" "web" {
+  instance_type = "t3.micro"
+}
+```
+
+Here, `instance_type` is an argument.
+
+**Attributes:** These are values exposed by a resource or data source. Some are computed by the provider after the resource is created.
+
+Example:
+
+```hcl
+output "instance_id" {
+  value = aws_instance.web.id
+}
+```
+
+Here, `aws_instance.web.id` references the resource's ID attribute.
+
+**Interpolation:** This traditionally refers to inserting expressions into strings using syntax such as `${...}`. Modern Terraform uses expressions directly in most places.
+
+Example:
+
+```hcl
+name = "web-${var.environment}"
+```
+
+Here, `${var.environment}` interpolates the environment variable into the string.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+176. ### What are Dynamic Blocks?
+
+Dynamic blocks allow Terraform to generate repeated nested configuration blocks from a collection.
+
+They are useful when a resource requires multiple nested blocks, such as several ingress rules in a security group.
+
+Example:
+
+```hcl
+variable "ingress_rules" {
+  default = [
+    {
+      from_port = 80
+      to_port   = 80
+      protocol  = "tcp"
+    },
+    {
+      from_port = 443
+      to_port   = 443
+      protocol  = "tcp"
+    }
+  ]
+}
+
+resource "aws_security_group" "web" {
+  name = "web-sg"
+
+  dynamic "ingress" {
+    for_each = var.ingress_rules
+
+    content {
+      from_port   = ingress.value.from_port
+      to_port     = ingress.value.to_port
+      protocol    = ingress.value.protocol
+      cidr_blocks = ["10.0.0.0/8"]
+    }
+  }
+}
+```
+
+Terraform generates one `ingress` block for each item in `var.ingress_rules`.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+177. ### How do you delete a specific resource while running Terraform Apply?
+
+The preferred approach is to remove the resource from the Terraform configuration when you genuinely want to delete it, then review and apply the plan.
+If I want to destroy only a specific resource, I can use the `-target` option:
+
+```bash
+terraform plan -destroy -target=aws_instance.web
+terraform destroy -target=aws_instance.web
+```
+
+The `-target` option should generally be reserved for exceptional situations, not routine infrastructure management. I would carefully review the plan because Terraform may also need to destroy dependent resources.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+178. ### How does Terraform resolve Resource Dependencies?
+
+Terraform builds a dependency graph to determine the order in which resources should be created, updated, or destroyed.
+
+There are two main ways to define dependencies:
+
+**1. Implicit dependency**
+
+Terraform detects a dependency when one resource references an attribute of another resource.
+
+```hcl
+resource "aws_instance" "web" {
+  subnet_id = aws_subnet.public.id
+}
+```
+
+Here, the instance depends on the subnet because it references `aws_subnet.public.id`.
+
+**2. Explicit dependency**
+
+We can use `depends_on` when Terraform cannot infer a dependency from resource references.
+
+```hcl
+resource "aws_instance" "web" {
+  ami           = "ami-xxxxxxxx"
+  instance_type = "t3.micro"
+
+  depends_on = [
+    aws_iam_role_policy.example
+  ]
+}
+```
+
+Terraform uses the dependency graph to determine which resources can run in parallel and which must wait for other resources.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+179. ### Which command should you run to inspect and sync state with reality without changing actual resources?
+
+The traditional command is:
+
+```bash
+terraform refresh
+```
+
+It reads the actual infrastructure and updates the Terraform state to reflect the observed values. It does not modify the actual infrastructure, but it directly changes the state.
+
+However, `terraform refresh` is deprecated because it can update state without giving you an opportunity to review the changes first.
+
+The safer modern approach is:
+
+```bash
+terraform plan -refresh-only
+```
+
+This displays the proposed state updates without changing actual infrastructure or immediately saving the refreshed state.
+
+After reviewing the changes, run:
+
+```bash
+terraform apply -refresh-only
+```
+
+This saves the refreshed state without applying infrastructure changes.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+180. ### How do we protect Sensitive Variables in Terraform?
+
+We can protect sensitive variables by combining Terraform's sensitivity features with secure storage and access controls.
+
+**1. Mark variables as sensitive**
+
+```hcl
+variable "db_password" {
+  type      = string
+  sensitive = true
+}
+```
+
+This redacts the value in many Terraform CLI outputs, but does not automatically encrypt or remove it from state.
+
+**2. Use a secure secrets manager**
+
+Store secrets in AWS Secrets Manager, AWS Systems Manager Parameter Store, or another suitable secrets manager.
+
+**3. Protect the state file**
+
+Use a remote backend with encryption, restrictive IAM permissions, and appropriate state access controls.
+
+**4. Avoid hardcoding secrets**
+
+Do not commit passwords, API keys, or tokens to GitHub.
+
+**5. Protect CI/CD logs**
+
+Avoid printing secret values in pipeline output and restrict access to logs and saved plan files.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+181. ### What happens when you remove the middle item from a list of resources managed using Count?
+
+Suppose we manage three servers using `count` and a list:
+
+```hcl
+servers = ["A", "B", "C"]
+```
+
+Terraform creates resources with these addresses:
+
+- `aws_instance.server[0]` → A
+- `aws_instance.server[1]` → B
+- `aws_instance.server[2]` → C
+
+If we remove B, the list becomes:
+
+```hcl
+servers = ["A", "C"]
+```
+
+Now the indexes become:
+
+- `aws_instance.server[0]` → A
+- `aws_instance.server[1]` → C
+
+Terraform sees that index `[2]` is no longer required and that index `[1]` now has a different configuration value. Depending on the resource attributes and their replacement requirements, Terraform may update or replace resources, and it may destroy the resource at the old index `[2]`.
+
+This can cause unexpected infrastructure changes when list positions shift.
+
+**Better approach:** Use `for_each` with stable, unique keys when managing named resources.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+182. ### How do you stop managing an existing S3 bucket without deleting it?
+
+Use the `terraform state rm` command to remove the resource from Terraform state tracking without deleting the actual S3 bucket.
+
+Example:
+
+```bash
+terraform state rm aws_s3_bucket.my_bucket
+```
+
+Before running the command, ensure that the resource configuration is also handled appropriately. If the resource remains in the configuration, Terraform may plan to create a replacement because it no longer finds the resource in the state.
+
+In newer Terraform versions, a `removed` block with `destroy = false` is another option for removing a resource from management through configuration.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+183. ### How do you protect a production Aurora PostgreSQL cluster against accidental deletion or replacement?
+
+I would use Terraform lifecycle protection and AWS-level safeguards.
+
+**1. Enable Terraform deletion protection**
+
+```hcl
+resource "aws_rds_cluster" "production" {
+  cluster_identifier = "production-aurora"
+
+  deletion_protection = true
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+```
+
+The example shows the relevant settings; the remaining required cluster configuration must also be supplied.
+
+- `deletion_protection = true` enables AWS RDS deletion protection for the cluster.
+- `prevent_destroy = true` tells Terraform to reject plans that would destroy the resource while this lifecycle rule remains in the configuration.
+
+**2. Protect against data loss**
+
+- Enable automated backups and configure an appropriate retention period.
+- Take manual snapshots before major changes.
+- Restrict who can modify or disable deletion protection through IAM.
+
+**Important:** `prevent_destroy` does not protect a resource if its configuration is removed entirely, because the lifecycle rule is then removed too. AWS deletion protection provides an additional safeguard against cluster deletion, but replacement scenarios and related database resources must still be reviewed carefully.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+184. ### What will Terraform Refresh do?
+
+Terraform refresh reads the current state of real infrastructure through provider APIs and updates the Terraform state to reflect the observed values.
+
+For example, if someone changes an EC2 instance's attributes directly through the AWS Console, a refresh can update the state to reflect what Terraform observes.
+
+The traditional command is:
+
+```bash
+terraform refresh
+```
+
+This command is deprecated. Prefer:
+
+```bash
+terraform plan -refresh-only
+```
+
+Review the proposed changes, then use:
+
+```bash
+terraform apply -refresh-only
+```
+
+to save the updated state without changing the actual infrastructure.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+185. ### How will you restore a Terraform State File if it gets accidentally deleted?
+
+First, I would identify whether the state is stored locally or in a remote backend.
+
+**If state is stored in Amazon S3:**
+
+1. Check whether S3 bucket versioning is enabled.
+2. Identify the last known-good version of the state object.
+3. Restore the appropriate version or download it as a recovery copy.
+4. Check the current state and backend configuration before resuming Terraform operations.
+5. Run a refresh-only plan and a normal plan to verify that Terraform correctly identifies the infrastructure.
+
+**If state is stored locally:**
+
+Check for backup files, version control exclusions, workstation backups, or other copies of the state.
+
+For a local backend, Terraform may create a `terraform.tfstate.backup` file after certain state operations, but it should not be assumed to exist or be current.
+
+If no valid backup is available, state may need to be reconstructed by importing existing resources into Terraform state.
+
+**Important:** Never run `terraform apply` blindly after losing the state file. Terraform may interpret existing infrastructure as missing and propose creating duplicate resources.
+
+**[⬆ Back to Top](#table-of-contents)**
+
+186. ### What happens if you do not use DynamoDB with a State File Stored Remotely in S3?
+
+Without DynamoDB or another supported locking mechanism, concurrent Terraform operations can access the same state without reliable mutual exclusion.
+
+Possible problems include:
+- Two users running `terraform apply` at the same time.
+- Conflicting infrastructure changes.
+- State write conflicts or lost updates.
+- State inconsistencies and potential corruption.
+
+However, DynamoDB is not mandatory for every S3 backend configuration. Modern Terraform versions support native S3 state locking through a lock file.
+
+Example:
+
+```hcl
+terraform {
+  backend "s3" {
+    bucket       = "my-terraform-state"
+    key          = "production/terraform.tfstate"
+    region       = "ap-south-1"
+    use_lockfile = true
+  }
+}
+```
+
+With native locking enabled, Terraform uses the S3 lock file to coordinate state-changing operations. The IAM permissions must allow the required operations on both the state object and the lock file.
+
+**[⬆ Back to Top](#table-of-contents)**
